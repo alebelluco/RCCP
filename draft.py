@@ -7,7 +7,7 @@ import numpy as np
 st.set_page_config(layout='wide')
 st.title('RCCP Lavorazioni Meccaniche')
 st.subheader(':red[Draft]', divider='red')
-path = st.file_uploader('Caricare il file')
+path = st.file_uploader('Caricare il file PPP')
 if not path:
     st.stop()
 

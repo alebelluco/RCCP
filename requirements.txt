@@ -7,4 +7,4 @@ requests
 plotly-express
 xlrd
 openpyxl
-
+xlsxwriter

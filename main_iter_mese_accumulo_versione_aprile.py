@@ -47,7 +47,7 @@ mesi = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC']
 
 line = st.sidebar.radio('Selezionare linea', options=['AD','AM'])
 
-path = st.sidebar.file_uploader('Caricare il file')
+path = st.sidebar.file_uploader('Caricare il file PPP')
 if not path:
     st.stop()
 

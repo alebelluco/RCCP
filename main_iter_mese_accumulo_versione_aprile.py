@@ -700,7 +700,7 @@ with tab1:
     st.subheader('Programma di produzione', divider='grey')
     st.write(prog_prod)
     'Download programma di produzione'
-    scarica_excel(db_assegnato, 'Programma_prod.xlsx')
+    scarica_excel(prog_prod, 'Programma_prod.xlsx')
     #db_assegnato
 
     #coperture

@@ -47,7 +47,7 @@ mesi = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC']
 
 line = st.sidebar.radio('Selezionare linea', options=['AD','AM'])
 
-path = st.sidebar.file_uploader('Caricare il file PPP')
+path = st.sidebar.file_uploader('Caricare il file')
 if not path:
     st.stop()
 
@@ -124,9 +124,11 @@ righe_filtro=[
                 "MTS 896 S"
 ]
 
-cad = cad[[any(key in check for key in righe_filtro) for check in cad['PPP 2025 esp 013'].astype(str)]]
+#cad = cad[[any(key in check for key in righe_filtro) for check in cad['PPP 2025 esp 013'].astype(str)]]
+cad = cad[[any(key in check for key in righe_filtro) for check in cad[cad.columns[1]].astype(str)]]
 cad = cad.drop(columns = ['Unnamed: 2','1° sem','2°sem','anno'])
-cad = cad.rename(columns={'Unnamed: 0': 'Gruppo', 'PPP 2025 esp 013':'Modello'})
+#cad = cad.rename(columns={'Unnamed: 0': 'Gruppo', 'PPP 2025 esp 013':'Modello'})
+cad = cad.rename(columns={'Unnamed: 0': 'Gruppo', cad.columns[1]:'Modello'})
 cad = cad.fillna(0)
 cad = cad[cad.columns[0:9]]
 
@@ -697,18 +699,66 @@ with tab1:
     prog_prod = db_assegnato[['Mese','Linea','Fase','Macchina assegnata','Modello','volumi','volumi_pezzi']]
     prog_prod['Mese'] = pd.Categorical(prog_prod['Mese'], categories=mesi)
     prog_prod=prog_prod.sort_values(by=['Mese','Linea','Fase','Macchina assegnata']).reset_index(drop=True)
-    st.subheader('Programma di produzione', divider='grey')
-    st.write(prog_prod)
-    'Download programma di produzione'
-    scarica_excel(prog_prod, 'Programma_prod.xlsx')
-    #db_assegnato
+    
 
     #coperture
     coperture = coperture.rename(columns={'variable':'Mese'})
     stock_cop = stock[['Modello','Mese','andamento']].merge(coperture[['Modello','Mese','value']], how='left', left_on=['Modello','Mese'], right_on=['Modello','Mese'])
     stock_cop = stock_cop[stock_cop.value.astype(str) != 'nan']
-    stock_cop 
+
+    list_cop = []
+    stock_cop['copertura']=0
+    for cod in stock_cop.Modello.unique():
+        frame_work = stock_cop[stock_cop.Modello == cod]
+        for i in range(len(frame_work)-1):
+            stock_val = frame_work.andamento.iloc[i]
+            cop = 0
+            for j in range(i,len(frame_work)-1):
+                domanda = frame_work.value.iloc[j]
+                if stock_val > domanda:
+                    cop+=1
+                    stock_val -= domanda
+                else:
+                    cop += stock_val / domanda
+                    break
+            if cop < 0:
+                cop = 0
+            frame_work.copertura.iloc[i] = cop
+        frame_work.copertura.iloc[11] = 1 #l'ultimo mese ha copertura 1 per convenzione
+        list_cop.append(frame_work)
     
+    coperture_tot = pd.concat(list_cop)
+
+    def highlighter(x):
+        is_negative = x < soglia
+        style_lt = "background-color: #EE2E31; color: white; font-weight: bold;"
+        style_gt = "background-color: #006E50; color: white; font-weight: bold;"
+        return [style_lt if i else style_gt for i in is_negative]
+    
+
+    coperture_tot = coperture_tot[['Modello','Mese','copertura']].fillna(0)
+    coperture_tot = coperture_tot.pivot(index='Modello',columns='Mese')
+    coperture_tot = coperture_tot[[('copertura','GEN'),('copertura','FEB'),('copertura','MAR'),('copertura','APR'),('copertura','MAG'),('copertura','GIU'),('copertura','LUG'),('copertura','AGO'),('copertura','SET'),('copertura','OTT'),('copertura','NOV'),('copertura','DIC')]]
+    st.subheader('Coperture', divider='grey')
+    #coperture_tot.style.apply(highlighter)
+    sx_soglia, dx_soglia = st.columns([1,8])
+    with sx_soglia:
+        soglia = st.number_input('Inserire soglia',value=1)
+    st.write(coperture_tot.style.apply(highlighter))
+
+    stock_andamento = stock[['Modello','Mese','andamento']].pivot(index='Modello',columns='Mese')
+    stock_andamento=stock_andamento[[('andamento','GEN'),('andamento','FEB'),('andamento','MAR'),('andamento','APR'),('andamento','MAG'),('andamento','GIU'),('andamento','LUG'),('andamento','AGO'),('andamento','SET'),('andamento','OTT'),('andamento','NOV'),('andamento','DIC')]]
+    st.subheader('Stock', divider='grey')
+    st.dataframe(stock_andamento)
+
+    prog_piv = prog_prod[['Mese','Modello','volumi_pezzi']].groupby(by=['Mese','Modello'],as_index=False).min().pivot(index='Modello',columns='Mese')
+
+    st.subheader('Programma di produzione', divider='grey')
+    #st.write(prog_prod)
+    st.write(prog_piv)
+    'Download programma di produzione'
+    scarica_excel(db_assegnato, 'Programma_prod.xlsx')
+    #db_assegnato
     
 with tab2:
 

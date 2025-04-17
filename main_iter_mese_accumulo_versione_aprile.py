@@ -347,7 +347,7 @@ fabbisogno_melt['delta_volume'] = np.where(fabbisogno_melt.moving_type=='totale'
 st.subheader('Fabbisogno')
 
 fabbisogno_print = fabbisogno.copy()
-excl_comp = ['AA','AP','SA','SP','-O','-V']
+excl_comp = ['AA','AP','SA','SP','-O','-V','Dummy']
 fabbisogno_print = fabbisogno_print[[all(escl not in modello for escl in excl_comp) for modello in fabbisogno_print.Modello]]
 
 fabbisogno_print.loc['Totale'] = fabbisogno_print.sum()

@@ -818,6 +818,7 @@ with tab2:
         st.plotly_chart(test, use_container_width=True)
         st.write('Dettaglio assegnazione di partenza')
         #assegnati_prima = fabbisogno_melt.drop(columns='alternative')
+        fabbisogno_melt['alternative'] = fabbisogno_melt['alternative'].fillna(0)
         st.dataframe(fabbisogno_melt[(fabbisogno_melt.Fase == fase_select) & (fabbisogno_melt.Mese == selected_month)][['Macchina standard','Modello','volumi','tempo_ciclo','wl','alternative']], use_container_width=True)
         #if st.toggle('Visualizza alternative'):
         #   for key in cod_crit[cod_crit.Fase == fase_select].key_alt.unique():

@@ -130,7 +130,7 @@ cad = cad.drop(columns = ['Unnamed: 2','1° sem','2°sem','anno'])
 #cad = cad.rename(columns={'Unnamed: 0': 'Gruppo', 'PPP 2025 esp 013':'Modello'})
 cad = cad.rename(columns={'Unnamed: 0': 'Gruppo', cad.columns[1]:'Modello'})
 cad = cad.fillna(0)
-cad = cad[cad.columns[0:9]]
+cad = cad[cad.columns[0:14]]
 
 # OEE
 oee = pd.read_excel(flat_path, sheet_name='OEE')

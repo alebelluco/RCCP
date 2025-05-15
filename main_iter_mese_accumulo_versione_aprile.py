@@ -531,7 +531,7 @@ def livella_macchine(workload,mesi):
 
                                 db_assegnato.loc[len(db_assegnato)] = to_split.iloc[i]
                                 #db_assegnato['volumi_pezzi'].iloc[-1] = db_assegnato['volumi_pezzi'].iloc[-1] - db_assegnato['delta_volume'].iloc[-1]
-                                db_assegnato['volumi_pezzi'].iloc[-1] = db_assegnato['volumi_pezzi'].iloc[-1] - moved
+                                db_assegnato['volumi_pezzi'].iloc[-1] = db_assegnato['volumi_pezzi'].iloc[-1] - tot_moved
                                 db_assegnato['volumi'].iloc[-1] = db_assegnato['volumi_pezzi'].iloc[-1] / db_assegnato['CI'].iloc[-1]
                                 db_assegnato['Macchina assegnata'].iloc[-1] = mac_std
 

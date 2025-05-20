@@ -594,7 +594,7 @@ def livella_macchine(workload,mesi):
 
 # ottimizzazione accumulo============================================
 db_assegnato = livella_macchine(workload, mesi)
-
+#st.write(db_assegnato[(db_assegnato.Mese == 'GIU') & (db_assegnato.Fase == 'rettifica') & (db_assegnato['Macchina standard']=='Tacchella 3')])
 # da qui in poi serve solo per visualizzare==========================
 #'fabbisogno melt'
 #st.write(fabbisogno_melt[(fabbisogno_melt.Mese =='GEN') & (fabbisogno_melt.Fase=='rettifica')])
@@ -829,10 +829,12 @@ with tab1:
     #st.write(prog_prod)
     #st.write(prog_piv)
 
-
+    #'fabbisogno melt debug'
+    #fabbisogno_melt
     prpr = fabbisogno_melt[['Mese','Modello','volumi']].drop_duplicates()
     prpr = prpr.merge(var, how='left', left_on=['Mese','Modello'], right_on=['Mese','Modello'])
-    prpr['Prod'] = prpr['volumi']+prpr['Var']
+    #prpr
+    prpr['Prod'] = prpr['volumi'] #+prpr['Var']
     prpr = prpr[['Mese','Modello','Prod']].pivot(index='Modello',columns='Mese')
     prpr=prpr[[('Prod','GEN'),('Prod','FEB'),('Prod','MAR'),('Prod','APR'),('Prod','MAG'),('Prod','GIU'),('Prod','LUG'),('Prod','AGO'),('Prod','SET'),('Prod','OTT'),('Prod','NOV'),('Prod','DIC')]]
     st.write(prpr)
@@ -931,4 +933,3 @@ with tab2:
         st.write('Riassegnazioni effettuate')
         st.dataframe(moving[moving.Fase==fase_select], use_container_width=True)
         #st.dataframe(db_assegnato)
-

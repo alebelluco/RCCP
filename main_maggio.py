@@ -712,6 +712,7 @@ with tab1:
     #prendo le righe peggiori per mese e modello (quelle con il maggior numero di motori non fatti)
     #'non prodotto'
     #non_prodotto
+    non_prodotto['qty_res [motori]'] = np.where(non_prodotto['qty_res [motori]'].astype(str)=='nan', non_prodotto.volumi, non_prodotto['qty_res [motori]'])
     non_prodotto = non_prodotto.loc[list(non_prodotto[['Mese','Modello','qty_res [motori]']].groupby(by=['Mese','Modello']).idxmax()['qty_res [motori]'])]
     #'non prod dopo'
     #non_prodotto

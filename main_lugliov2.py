@@ -7,6 +7,8 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly_express as px
 from io import BytesIO
+import pulp
+from pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpBinary, LpContinuous, LpStatus, value
 
 st.set_page_config(layout='wide')
 st.title('RCCP Lavorazioni Meccaniche')
@@ -106,6 +108,7 @@ filtri = pd.read_excel(flat_path, sheet_name='filtri')
 righe_filtro = list(filtri['Mantenere_perdite_cadenze'])
 
 filtri['rimuovere_PPP'] = [str(voce) for voce in filtri.rimuovere_PPP]
+
 escludi_ppp = list(filtri[filtri.rimuovere_PPP.astype(str) != 'nan']['rimuovere_PPP'])
 
 #cad = cad[[any(key in check for key in righe_filtro) for check in cad['PPP 2025 esp 013'].astype(str)]]
@@ -122,18 +125,19 @@ oee = pd.read_excel(flat_path, sheet_name='OEE')
 df = df[5:] # elimino la parte di pianificazione
 df = df[df[df.columns[0]].astype(str) != 'nan']
 
-esclusioni = ['Produz', 'Preserie','Progressivo','gg']
+
+esclusioni = ['Produz', 'Preserie','Progressivo', 'Piattaforma']
 df = df[[all(escluso not in test for escluso in esclusioni) for test in df[df.columns[0]].astype(str)]]
 #df = df[[all(escluso not in test for escluso in esclusioni) for test in df['PPP 2025 esp 013'].astype(str)]]
 df = df.reset_index(drop=True)
 df=df.rename(columns={df.columns[0]:'Modello'})
-df = df[:-5]
+
+
 df.loc[len(df)-1] = df.iloc[-1]
 df.iloc[-1] = 0
 df.Modello.iloc[-1] = 'Dummy'
 
 df = df.fillna(0)
-
 
 #filtro per 896 - scr
 df = df[[all(elemento not in check for elemento in escludi_ppp) for check in df.Modello.astype(str)]]
@@ -142,11 +146,14 @@ df['Gruppo']='PPP_Veicoli'
 
 df_tot = pd.concat([df, cad])
 
+
+
 #rename SETT column to SET
 
 
 
 df_tot = df_tot.merge(bom, how='left', left_on='Modello', right_on='Modello')
+
 df_tot = df_tot[df_tot.Nota.astype(str) != 'in phase out, non lo consideriamo']
 
 fabbisogno_aggregato_alberi = df_tot.copy()
@@ -164,16 +171,18 @@ fabbisogno_aggregato_camme = fabbisogno_aggregato_camme.groupby(by=['Albero_camm
 fabbisogno_aggregato_camme = fabbisogno_aggregato_camme.rename(columns={'CI [2 | 4]':'CI', 'Albero_camme':'Modello'})
 fabbisogno_aggregato_camme['Linea']='AD'
 
+fabbisogno_aggregato_calberi['Contralberi'] = [str(voce).replace(' ','') for voce in fabbisogno_aggregato_calberi.Contralberi]
 fabbisogno_aggregato_calberi = fabbisogno_aggregato_calberi.drop(columns=['Modello','Gruppo','Nota','Albero_camme', 'Albero','CI [2 | 4]'])
 fabbisogno_aggregato_calberi = fabbisogno_aggregato_calberi.groupby(by='Contralberi', as_index=False).sum()
 fabbisogno_aggregato_calberi = fabbisogno_aggregato_calberi.rename(columns={'Contralberi':'Modello'})
 fabbisogno_aggregato_calberi['CI']=2
 fabbisogno_aggregato_calberi['Linea']='AD'
 
+
+
 fabbisogno = pd.concat([fabbisogno_aggregato_alberi,fabbisogno_aggregato_camme, fabbisogno_aggregato_calberi])
 fabbisogno = fabbisogno[fabbisogno.Modello.astype(str) != '0']
 fabbisogno = fabbisogno[fabbisogno.Linea == line]
-
 
 flat['key'] = flat['Mese']+'-' + flat['Linea']+'-'+flat['Codice']
 fabbisogno_melt= fabbisogno.melt(id_vars=['Modello','Linea','CI'])
@@ -248,26 +257,14 @@ for modello in stock.Modello.unique():
     cum_var = cum_var + list(work.cum_sum)
 stock['cum_var'] = cum_var
 stock['andamento'] = stock['value']+stock['cum_var'] 
-#stock.drop(columns=['value', 'Var', 'cum_var'], inplace=True)
-
-#st.session_state.utilizzo
-#stock
-
-#fabbisogno_melt = st.session_state.fab_melt.copy()
 
 fabbisogno_melt = fabbisogno_melt.merge(flat, how='left', left_on='key', right_on='key')
 
 #flat
 
 fabbisogno_melt = fabbisogno_melt[fabbisogno_melt.Codice.astype(str)!='nan']
-#fabbisogno_melt = fabbisogno_melt.merge(contolavoro[['key','Quantità']], how='left', left_on='key', right_on='key')
-#fabbisogno_melt['Quantità'] = fabbisogno_melt['Quantità'].fillna(0)
-#fabbisogno_melt = fabbisogno_melt.rename(columns={'volumi':'volumi_ppp'})
-# toglie i volumi di contolavoro
-#fabbisogno_melt['volumi'] = fabbisogno_melt['volumi_ppp'] - fabbisogno_melt['Quantità']
 fabbisogno_melt['volumi_pezzi'] = fabbisogno_melt['volumi'] * fabbisogno_melt['CI']
 fabbisogno_melt['wl'] = fabbisogno_melt['volumi_pezzi']*fabbisogno_melt.value / 60
-
 fabbisogno_melt['key_alt'] = fabbisogno_melt['key']+'-'+fabbisogno_melt['Macchina standard']+'-'+fabbisogno_melt['Op']
 fabbisogno_melt['alternative']=None
 
@@ -285,7 +282,6 @@ fabbisogno_melt = fabbisogno_melt.rename(columns={'Linea_x':'Linea','value':'tem
 fabbisogno_melt = fabbisogno_melt[['Mese','Linea','Modello','Fase','Macchina standard','volumi','tempo_ciclo','wl','alternative','key','key_alt','CI','volumi_pezzi']]
 
 workload = fabbisogno_melt[['Mese','Fase','Macchina standard','wl']].groupby(by=['Mese','Fase','Macchina standard'], as_index=False).sum()
-#workload
 
 #presenti = list(workload['Macchina standard'].unique())
 #presenti
@@ -400,6 +396,8 @@ def livella_macchine(workload,mesi):
             
             if (line=='AM') and ('Tacchella 2' not in dic_sat.keys()):
                 dic_sat['Tacchella 2'] = - 2000
+            if (line=='AD') and ('STAMA 4 BIS' not in dic_sat.keys()):
+                dic_sat['STAMA 4 BIS'] = - 2000
 
             
             for i in range(len(to_split)):
@@ -578,14 +576,17 @@ def livella_macchine(workload,mesi):
     db_assegnato = pd.concat(lista_assegnati)
     return db_assegnato
 
+
 # ottimizzazione accumulo============================================
 db_assegnato = livella_macchine(workload, mesi)
-#st.write(db_assegnato[(db_assegnato.Mese == 'GIU') & (db_assegnato.Fase == 'rettifica') & (db_assegnato['Macchina standard']=='Tacchella 3')])
-# da qui in poi serve solo per visualizzare==========================
-#'fabbisogno melt'
-#st.write(fabbisogno_melt[(fabbisogno_melt.Mese =='GEN') & (fabbisogno_melt.Fase=='rettifica')])
+
+
+#db_assegnato = ottimizzazione_fine(db_assegnato)
 
 workload_graph = workload_elaborato
+
+
+
 workload_graph['Macchina standard'] = pd.Categorical(workload_graph['Macchina standard'], categories=macchine)
 
 cols_ass=[
@@ -622,7 +623,6 @@ cols_dupl = [
 db_assegnato = db_assegnato[cols_ass]
 db_assegnato = db_assegnato.drop_duplicates(subset=cols_dupl) # ho tolto le righe di partenza assegnate più volte (quando le macchine alternative sono già piene)
 db_assegnato['key'] = db_assegnato['Macchina assegnata']+'-'+db_assegnato['Mese']
-
 
 assegnato_aggr = db_assegnato[['key','wl']].groupby(by='key', as_index=False).sum()
 assegnato_aggr = assegnato_aggr.rename(columns={'wl':'wl_dopo_split'})
@@ -918,3 +918,4 @@ with tab2:
         st.write('Riassegnazioni effettuate')
         st.dataframe(moving[moving.Fase==fase_select], use_container_width=True)
         #st.dataframe(db_assegnato)
+

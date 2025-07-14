@@ -7,8 +7,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly_express as px
 from io import BytesIO
-import pulp
-from pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpBinary, LpContinuous, LpStatus, value
+
 
 st.set_page_config(layout='wide')
 st.title('RCCP Lavorazioni Meccaniche')
